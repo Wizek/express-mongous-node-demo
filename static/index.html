@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8"/>
+    <title>AJAX-os Express+MongoDB példa</title>
+    <style type="text/css" media="screen">
+      form{
+        display:inline-block;
+        margin:10px;
+        padding:2px;
+        border: solid 1px #BBB;
+        background:#EEE}
+        button{
+          font-size:16px;
+        }
+    </style>
+    <script type="text/javascript" src="/jquery-1.4.4.min.js"></script>
+    <script type="text/javascript">
+      // Inicializáló függvény
+      $(function() {
+        // Az összes gomb funkciója: begyüjtjük az adott form adatait, és JSON-ként továbbítjuk
+        $('input.submit').click(function() {
+          // Kikapcsoljuk az összes gombot arra az időre, ameddig nem érkezik meg a válasz
+          $('input.submit').attr('disabled', 1)
+          var qryStr = $(this).parent('form').serializeObject()
+          $.ajax(
+            {data:JSON.stringify(qryStr)
+            ,url:'/'
+            ,type:'POST'
+            ,contentType:'application/json'
+            ,dataType:'json'
+            ,error: this.success
+            ,success: function(r){
+              // visszakapcsoljuk a gombokat
+              $('input.submit').removeAttr('disabled')
+              // megjelenítjuk a választ
+              if (r.length < 10) {
+                $('div#paging').hide()
+                $('pre').text(JSON.stringify(r, null, 2))
+              }else{
+                $('div#paging').show()
+                var allPages = Math.ceil(r.length/10)
+                  , currPage = 1
+                
+                $('span#allPages').text(allPages)
+                display()
+
+                $('button#prev').click(function() {
+                  var $self = $(this)
+                  if (currPage > 1) {
+                    currPage--
+                    display()
+                  }
+                })
+
+                $('button#next').click(function() {
+                  var $self = $(this)
+                  if (currPage < allPages) {
+                    currPage++
+                    display()
+                  }
+                })
+
+                function display () {
+                  $('pre').text(JSON.stringify(r.slice((currPage-1)*10, (currPage*10)-1), null, 2))
+                  $('span#currPage').text(currPage)
+                }
+              }
+            }
+          })
+        })
+        // kattintást szimulálunk a frissítés gombra, hogy betöltődjenek az adatok.
+        $('input#refresh').click()
+      })
+
+      /*\
+       *  Mini modulok
+      \*/
+
+      // Kiegészítés hogy objektumot kapjunk vissza, mert a tömb kevésbé használható
+      $.fn.serializeObject = function() {
+        var o = {};
+        var a = this.serializeArray();
+        $.each(a, function() {
+          if (o[this.name]) {
+            if (!o[this.name].push) {
+              o[this.name] = [o[this.name]];
+            }
+            o[this.name].push(this.value || '');
+          } else {
+            o[this.name] = this.value || '';
+          }
+        });
+        return o;
+      };
+    </script>
+  </head>
+  <body>
+    <center>
+      <form>
+        <input type="hidden" name="type" value="refresh">
+        <input id="refresh" class="submit" type="button" value="Frissítés...">
+      </form>
+      <form>
+        <input type="text" name="what">
+        <input type="hidden" name="type" value="add">
+        <input class="submit" type="button" value="Hozzáadás!">
+      </form>
+      <form>
+        <select name="which">
+          <option value="value">Érték</option>
+          <option value="id">ID</option>
+        </select>
+        <input type="text" name="what">
+        <input type="hidden" name="type" value="del">
+        <input class="submit" type="button" value="Törlés!">
+      </form>
+      <form>
+        <select name="which">
+          <option value="value">Érték</option>
+          <option value="id">ID</option>
+        </select>
+        <input type="text" name="from">
+        &rArr;
+        <input type="text" name="to">
+        <input type="hidden" name="type" value="mod">
+        <input class="submit" type="button" value="Módosítás!">
+      </form>
+    </center>
+    <div>
+      <div id="paging">
+        <button id="prev">⇦</button>
+        <span id="currPage">1</span>
+        /
+        <span id="allPages">1</span>
+        Oldal
+        <button id="next">⇨</button>
+      </div>
+      <h4>Tárolt Dokumentumok:</h4>
+      <pre>Töltés...</pre>
+    </div>
+  </body>
+</html>
